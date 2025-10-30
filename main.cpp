@@ -1,19 +1,19 @@
 #include <SFML/Graphics.hpp>
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode({800, 600}), "Snake Game");
-    window.setFramerateLimit(60);
+    unsigned int maxXCells = 40, maxYCells = 20;
 
-    float speed = 100.f;
+    sf::RenderWindow window(sf::VideoMode({maxXCells * 40, maxYCells * 40}), "Snake Game");
+    window.setFramerateLimit(10);
+
+    float speed = 40.f;
     float distance;
     int direction = 0;
 
-    sf::Clock frameClock;
-    float dt;
-
     sf::CircleShape circle(20.f);
-    circle.setFillColor(sf::Color::Green);
-    circle.setPosition({400.f, 300.f});
+    circle.setFillColor(sf::Color::Blue);
+    circle.setPosition({20.f, 20.f});
+    circle.setOrigin({20.f, 20.f});
 
     while (window.isOpen()) {
         while (const std::optional event = window.pollEvent()) {
@@ -31,25 +31,37 @@ int main() {
             }
         }
 
-        dt = frameClock.restart().asSeconds();
-        distance = speed * dt;
+        distance = speed;
         
         switch (direction) {
             case 1:
-                circle.move({0.f, -distance});
+                circle.move({0.f, -distance}); // Lên
                 break;
             case 2:
-                circle.move({-distance, 0.f});
+                circle.move({-distance, 0.f}); // Trái
                 break;
             case 3:
-                circle.move({0.f, distance});
+                circle.move({0.f, distance}); // Xuống
                 break;
             case 4:
-                circle.move({distance, 0.f});
+                circle.move({distance, 0.f}); // Phải
                 break;
         }
 
         window.clear();
+
+        for (int y = 0; y < maxYCells; y++) {
+            for (int x = 0; x < maxXCells; x++) {
+                sf::RectangleShape cell({40.f, 40.f});
+                cell.setPosition({40.f * x, 40.f * y});
+                if ((x + y) % 2 == 0) 
+                    cell.setFillColor({102, 204, 0}); // Màu xanh lá đậm
+                else
+                    cell.setFillColor({178, 255, 102}); // Màu xanh lá nhạt
+                window.draw(cell);
+            }
+        }
+
         window.draw(circle);
         window.display();
     }
