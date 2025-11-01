@@ -5,11 +5,12 @@ class SnakeSegment {
     private:
         sf::RectangleShape shape;
     public:
-        SnakeSegment() : shape({40.f, 40.f}) {
+        SnakeSegment(sf::Vector2f initialPosition) : shape({40.f, 40.f}) {
             shape.setFillColor(sf::Color::Blue);
             shape.setOrigin(shape.getLocalBounds().getCenter());
             shape.setOutlineThickness(1.f);
             shape.setOutlineColor(sf::Color::Black);
+            shape.setPosition(initialPosition);
         }
 
         void setPosition(sf::Vector2f position) {
@@ -26,25 +27,26 @@ class SnakeSegment {
 };
 
 int main() {
+    // Những giá trị khởi đầu
     unsigned int maxXCells = 40, maxYCells = 20, segmentsNumber = 10;
+    float speed = 40.f, distance;
+    bool isDied = false;
+    char direction = 'O';
 
     sf::RenderWindow window(sf::VideoMode({maxXCells * 40, maxYCells * 40}), "Snake Game");
     window.setFramerateLimit(10);
 
-    float speed = 40.f;
-    float distance;
-    char direction = 'O';
-
     sf::CircleShape snakeHead(20.f);
     snakeHead.setFillColor(sf::Color::Red);
-    snakeHead.setPosition({20.f, 20.f});
+    snakeHead.setPosition({maxXCells / 2.f * 40.f + 20.f, maxYCells / 2.f * 40.f + 20.f});
     snakeHead.setOrigin(snakeHead.getLocalBounds().getCenter());
     snakeHead.setOutlineThickness(1.f);
     snakeHead.setOutlineColor(sf::Color::Black);
 
     std::vector<SnakeSegment> snakeSegmentVector;
     for (int index = 0; index < segmentsNumber; index++) {
-        snakeSegmentVector.emplace_back();
+        sf::Vector2f initalSegmentPosition({snakeHead.getPosition().x - index * 40.f - 40.f, snakeHead.getPosition().y});
+        snakeSegmentVector.emplace_back(initalSegmentPosition);
     }
     SnakeSegment &firstSegment = snakeSegmentVector.at(0);
 
@@ -53,13 +55,13 @@ int main() {
             if (event->is<sf::Event::Closed>())
                 window.close();
             else if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
-                if (keyPressed->scancode == sf::Keyboard::Scancode::W)
+                if (keyPressed->scancode == sf::Keyboard::Scancode::W && direction != 'S')
                     direction = 'W';
-                else if (keyPressed->scancode == sf::Keyboard::Scancode::A)
+                else if (keyPressed->scancode == sf::Keyboard::Scancode::A && direction != 'D' && direction != 'O')
                     direction = 'A';
-                else if (keyPressed->scancode == sf::Keyboard::Scancode::S)
+                else if (keyPressed->scancode == sf::Keyboard::Scancode::S && direction != 'W')
                     direction = 'S';
-                else if (keyPressed->scancode == sf::Keyboard::Scancode::D)
+                else if (keyPressed->scancode == sf::Keyboard::Scancode::D && direction != 'A')
                     direction = 'D';
             }
         }
@@ -79,31 +81,43 @@ int main() {
             }
         }
 
-        for (int index = segmentsNumber - 1; index > 0; index--) {
-            SnakeSegment &segment = snakeSegmentVector.at(index);
-            segment.setPosition(snakeSegmentVector.at(index - 1).getPosition());
-            segment.draw(window);
+        if (isDied == false) {
+            if (direction != 'O') {
+                for (int index = segmentsNumber - 1; index > 0; index--) {
+                        SnakeSegment &segment = snakeSegmentVector.at(index);
+                        segment.setPosition(snakeSegmentVector.at(index - 1).getPosition());
+
+                        if (snakeHead.getPosition() == segment.getPosition()) 
+                            isDied = true;
+                }
+
+                firstSegment.setPosition(snakeHead.getPosition());
+            
+                if (isDied)
+                    continue;
+
+                distance = speed;
+            
+                switch (direction) {
+                    case 'W':
+                        snakeHead.move({0.f, -distance}); // Lên
+                        break;
+                    case 'A':
+                        snakeHead.move({-distance, 0.f}); // Trái
+                        break;
+                    case 'S':
+                        snakeHead.move({0.f, distance}); // Xuống
+                        break;
+                    case 'D':
+                        snakeHead.move({distance, 0.f}); // Phải
+                        break;
+                }
+            }   
         }
 
-        firstSegment.setPosition(snakeHead.getPosition());
+        for (int index = segmentsNumber - 1; index > 0; index--)
+            snakeSegmentVector.at(index).draw(window);
         firstSegment.draw(window);
-
-        distance = speed;
-        
-        switch (direction) {
-            case 'W':
-                snakeHead.move({0.f, -distance}); // Lên
-                break;
-            case 'A':
-                snakeHead.move({-distance, 0.f}); // Trái
-                break;
-            case 'S':
-                snakeHead.move({0.f, distance}); // Xuống
-                break;
-            case 'D':
-                snakeHead.move({distance, 0.f}); // Phải
-                break;
-        }
 
         window.draw(snakeHead);
 
