@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
+#include <random>
 
 class SnakeSegment {
     private:
@@ -26,12 +27,40 @@ class SnakeSegment {
         }
 };
 
+class Food {
+    private:
+        sf::CircleShape shape;
+    public:
+        Food(sf::Vector2f initialPosition) : shape({20.f}) {
+            shape.setFillColor(sf::Color::Red);
+            shape.setOrigin(shape.getLocalBounds().getCenter());
+            shape.setPosition(initialPosition);
+        }
+
+        void draw(sf::RenderWindow &window) {
+            window.draw(shape);
+        }
+
+        void setPosition(sf::Vector2f position) {
+            shape.setPosition(position);
+        }
+
+        sf::Vector2f getPosition() {
+            return shape.getPosition();
+        }
+};
+
 int main() {
     // Những giá trị khởi đầu
-    unsigned int maxXCells = 40, maxYCells = 20, segmentsNumber = 10;
+    unsigned int maxXCells = 10, maxYCells = 10, initialSegmentNumber = 3;
     float speed = 40.f, distance;
     bool isDied = false;
     char direction = 'O';
+
+    std::random_device random;
+    std::mt19937 gen(random());
+    std::uniform_int_distribution<int> distX(0, maxXCells - 1);
+    std::uniform_int_distribution<int> distY(0, maxYCells - 1);
 
     sf::RenderWindow window(sf::VideoMode({maxXCells * 40, maxYCells * 40}), "Snake Game");
     window.setFramerateLimit(10);
@@ -44,11 +73,12 @@ int main() {
     snakeHead.setOutlineColor(sf::Color::Black);
 
     std::vector<SnakeSegment> snakeSegmentVector;
-    for (int index = 0; index < segmentsNumber; index++) {
+    for (int index = 0; index < initialSegmentNumber; index++) {
         sf::Vector2f initalSegmentPosition({snakeHead.getPosition().x - index * 40.f - 40.f, snakeHead.getPosition().y});
         snakeSegmentVector.emplace_back(initalSegmentPosition);
     }
-    SnakeSegment &firstSegment = snakeSegmentVector.at(0);
+
+    Food snakeFood({static_cast<float>(distX(gen)) * 40.f + 20.f, static_cast<float>(distY(gen)) * 40.f + 20.f});
 
     while (window.isOpen()) {
         while (const std::optional event = window.pollEvent()) {
@@ -82,44 +112,46 @@ int main() {
         }
 
         if (isDied == false) {
-            if (direction != 'O') {
-                for (int index = segmentsNumber - 1; index > 0; index--) {
-                        SnakeSegment &segment = snakeSegmentVector.at(index);
-                        segment.setPosition(snakeSegmentVector.at(index - 1).getPosition());
+            if (snakeHead.getPosition() == snakeFood.getPosition()) {
+                snakeFood.setPosition({static_cast<float>(distX(gen)) * 40.f + 20.f, static_cast<float>(distY(gen)) * 40.f + 20.f});
+                snakeSegmentVector.emplace_back(snakeSegmentVector.back().getPosition());
+            }
 
-                        if (snakeHead.getPosition() == segment.getPosition()) 
+            if (direction != 'O') {
+                for (int index = static_cast<int>(snakeSegmentVector.size()) - 1; index > 0; index--) {
+                        snakeSegmentVector.at(index).setPosition(snakeSegmentVector.at(index - 1).getPosition());
+
+                        if (snakeHead.getPosition() == snakeSegmentVector.at(index).getPosition()) 
                             isDied = true;
                 }
 
-                firstSegment.setPosition(snakeHead.getPosition());
+                snakeSegmentVector.at(0).setPosition(snakeHead.getPosition());
             
                 if (isDied)
                     continue;
-
-                distance = speed;
             
                 switch (direction) {
                     case 'W':
-                        snakeHead.move({0.f, -distance}); // Lên
+                        snakeHead.move({0.f, -speed}); // Lên
                         break;
                     case 'A':
-                        snakeHead.move({-distance, 0.f}); // Trái
+                        snakeHead.move({-speed, 0.f}); // Trái
                         break;
                     case 'S':
-                        snakeHead.move({0.f, distance}); // Xuống
+                        snakeHead.move({0.f, speed}); // Xuống
                         break;
                     case 'D':
-                        snakeHead.move({distance, 0.f}); // Phải
+                        snakeHead.move({speed, 0.f}); // Phải
                         break;
                 }
-            }   
+            }
         }
 
-        for (int index = segmentsNumber - 1; index > 0; index--)
+        for (int index = static_cast<int>(snakeSegmentVector.size()) - 1; index >= 0; index--)
             snakeSegmentVector.at(index).draw(window);
-        firstSegment.draw(window);
 
         window.draw(snakeHead);
+        snakeFood.draw(window);
 
         window.display();
     }
